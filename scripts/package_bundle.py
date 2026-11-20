@@ -70,6 +70,7 @@ def driver_meta(platform, version, mesa_version, mesa_commit, digest):
         'architecture': 'aarch64',
         'libc': 'glibc',
         'wsi': ['wayland', 'x11'],
+        'displayBuffers': True,
         'driverVersion': driver_version,
         'libraryName': LIBRARY,
         'mesaVersion': mesa_version,
