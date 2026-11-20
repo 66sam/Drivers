@@ -130,7 +130,8 @@ tu_display_buffer_alloc(const struct tu_image *image, uint64_t size,
    if (!format || image->vk.image_type != VK_IMAGE_TYPE_2D ||
        image->vk.mip_levels != 1 || image->vk.array_layers != 1 ||
        image->vk.samples != VK_SAMPLE_COUNT_1_BIT ||
-       !(image->vk.usage & VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT) ||
+       !(image->vk.usage & (VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT |
+                            VK_IMAGE_USAGE_STORAGE_BIT)) ||
        (!compressed && !linear) || layout->cpp != 4 || size < layout->size)
       return -1;
 
