@@ -4,6 +4,7 @@ import re
 import sys
 
 PREFIX = 'DD-Turnip-v'
+EMU_PREFIX = 'DD-Turnip-Emu-v'
 TAG = re.compile(re.escape(PREFIX) + r'(\d+)\.(\d+)\.(\d+)')
 INITIAL = (0, 1, 0)
 
@@ -43,3 +44,4 @@ if __name__ == '__main__':
     version = version_string(next_version(parse(latest['tag_name']) if latest else None, hotfix))
     print(f'version={version}')
     print(f'tag={PREFIX}{version}')
+    print(f'emu_tag={EMU_PREFIX}{version}')

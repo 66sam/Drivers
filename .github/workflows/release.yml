@@ -13,9 +13,14 @@ on:
         description: Prerelease (stays off Drivers-CI until promoted with promote.yml)
         type: boolean
         default: false
+      publish:
+        description: Publish (off builds and packages the release as a run artifact only)
+        type: boolean
+        default: true
 
 env:
   PRERELEASE: ${{ github.event_name == 'workflow_dispatch' && inputs.prerelease }}
+  PUBLISH: ${{ github.event_name != 'workflow_dispatch' || inputs.publish }}
 
 concurrency:
   group: dd-turnip-release
@@ -30,6 +35,7 @@ jobs:
     outputs:
       version: ${{ steps.version.outputs.version }}
       tag: ${{ steps.version.outputs.tag }}
+      emu_tag: ${{ steps.version.outputs.emu_tag }}
       mesa_commit: ${{ steps.mesa.outputs.commit }}
       mesa_version: ${{ steps.mesa.outputs.version }}
       changed: ${{ steps.changed.outputs.changed }}
@@ -49,6 +55,7 @@ jobs:
           gh api --paginate --slurp "repos/$GITHUB_REPOSITORY/releases?per_page=100" > releases.json
           python3 scripts/release_version.py "$HOTFIX" < releases.json | tee -a "$GITHUB_OUTPUT"
       - name: Refuse an existing tag
+        if: env.PUBLISH == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ steps.version.outputs.tag }}
@@ -156,10 +163,20 @@ jobs:
             --mesa-version "${{ needs.prepare.outputs.mesa_version }}" \
             --releases releases.json --repo "$GITHUB_REPOSITORY" --recipe "$GITHUB_SHA" > notes.md
           cat notes.md
+      - uses: actions/upload-artifact@v7
+        if: env.PUBLISH != 'true'
+        with:
+          name: release-${{ needs.prepare.outputs.tag }}
+          path: |
+            dist/
+            notes.md
+          if-no-files-found: error
       - name: Publish
+        if: env.PUBLISH == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ needs.prepare.outputs.tag }}
+          EMU: ${{ needs.prepare.outputs.emu_tag }}
           VERSION: ${{ needs.prepare.outputs.version }}
         run: |
           set -euo pipefail
@@ -172,10 +189,11 @@ jobs:
             flags=(--latest)
           fi
           gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1 \
-            || gh release create "$TAG" "dist/$TAG.zip" "dist/$TAG.zip.sha256" "dist/$TAG-source.tar.xz" --repo "$GITHUB_REPOSITORY" \
+            || gh release create "$TAG" "dist/$TAG.zip" "dist/$TAG.zip.sha256" "dist/$TAG-source.tar.xz" \
+              "dist/$EMU.zip" "dist/$EMU.zip.sha256" --repo "$GITHUB_REPOSITORY" \
               --target "$GITHUB_SHA" --title "DD-Turnip v$VERSION" --notes-file notes.md "${flags[@]}"
       - name: Publish to Drivers-CI
-        if: env.PRERELEASE != 'true'
+        if: env.PRERELEASE != 'true' && env.PUBLISH == 'true'
         env:
           GH_TOKEN: ${{ secrets.DRIVERS_CI_TOKEN }}
           TAG: ${{ needs.prepare.outputs.tag }}
