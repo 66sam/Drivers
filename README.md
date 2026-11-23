@@ -45,7 +45,41 @@ built it (`drivers/`). `NOTICE` in the zip says where it is and which licenses a
 ```
 
 Packaging refuses a bundle unless both libraries are AArch64, link the right libc, carry their platform markers
-(IMapper5 gralloc on Android, Wayland and XCB WSI on Linux), and were built from the same Mesa commit.
+(IMapper5 gralloc on Android, Wayland and XCB WSI on Linux), and were built from the same Mesa commit. The
+Android `minApi` is read from the library: the highest bionic symbol version it links (`LIBC_R` is Android 11,
+API 30), never lower than 29, and packaging fails on any glibc symbol version.
+
+## DD-Turnip-Emu
+
+Each release also carries `DD-Turnip-Emu-vX.Y.Z.zip` and its `.sha256`, with the same version: the `android/`
+driver from the bundle, byte for byte, packaged alone for Android emulators that install Adrenotools driver
+packages (Switch emulators and other Android emulators with a custom driver picker).
+
+```
+meta.json
+libvulkan_freedreno.so
+NOTICE
+LICENSES/…
+```
+
+```json
+{
+  "schemaVersion": 1,
+  "name": "DD-Turnip-Emu v1.0.0",
+  "description": "DroidDeck Turnip for Android emulators, Mesa 26.3.0-devel (…)",
+  "author": "DroidDeck",
+  "packageVersion": "1",
+  "vendor": "Mesa",
+  "driverVersion": "1.0.0",
+  "minApi": 30,
+  "libraryName": "libvulkan_freedreno.so"
+}
+```
+
+It is published on this repository's release only, never on Drivers-CI, so DroidDeck never lists it. Its
+Corresponding Source is the release's `DD-Turnip-vX.Y.Z-source.tar.xz`. The package layout and `meta.json`
+fields follow the Adrenotools driver package format by [bylaws](https://github.com/bylaws/libadrenotools)
+(`tools/ADPKG.md`) and the `meta.json` fields emulator driver installers read.
 
 ## Patch set
 
@@ -117,8 +151,10 @@ An unpromoted prerelease does not count, so the next build with the same version
   version and the Mesa main commit, builds Android and Linux in parallel from that commit, packages and verifies
   the bundle, and publishes the release here and to the public
   [Droid-Deck/Drivers-CI](https://github.com/Droid-Deck/Drivers-CI), which carries only the release assets
-  (bundle, `.sha256`, source archive) and is where DroidDeck downloads drivers from. Publishing there needs the `DRIVERS_CI_TOKEN` secret:
+  (bundle, `.sha256`, source archive) and is where DroidDeck downloads drivers from. `DD-Turnip-Emu` stays on this repository's release. Publishing there needs the `DRIVERS_CI_TOKEN` secret:
   a fine-grained token with Contents read and write on Drivers-CI.
+- `Publish` off runs the whole build and packaging and keeps `dist/` and the notes as a run artifact, without
+  creating a release or touching Drivers-CI.
 - `promote.yml` runs on manual dispatch with the prerelease tag, copies its assets and notes to Drivers-CI and
   marks it the latest release in both repositories.
 - `check.yml` runs the version tests and applies the patch set to Mesa main on every push and pull request.
@@ -127,6 +163,7 @@ An unpromoted prerelease does not count, so the next build with the same version
 gh workflow run release.yml
 gh workflow run release.yml -f hotfix=true
 gh workflow run release.yml -f prerelease=true
+gh workflow run release.yml -f publish=false
 gh workflow run promote.yml -f tag=DD-Turnip-v0.4.0
 ```
 
@@ -137,7 +174,7 @@ gh workflow run promote.yml -f tag=DD-Turnip-v0.4.0
 ```
 
 Fetches Mesa main (`MESA_REF` selects another ref), builds both drivers under `work/` and writes
-`dist/DD-Turnip-v0.1.0.zip` with its `.sha256` and source archive. Requirements: meson ≥ 1.5, ninja, Python with mako and PyYAML, flex, bison,
+`dist/DD-Turnip-v0.1.0.zip` and `dist/DD-Turnip-Emu-v0.1.0.zip` with their `.sha256` and the source archive. Requirements: meson ≥ 1.5, ninja, Python with mako and PyYAML, flex, bison,
 `ANDROID_NDK_HOME` pointing at an Android NDK, and `aarch64-linux-gnu-gcc`/`g++`/binutils with a host
 `wayland-scanner` for the Linux cross build. The Linux sysroot is assembled from Ubuntu 24.04 arm64 packages
 without root (`scripts/linux_sysroot.sh`); set `LINUX_SYSROOT` to reuse one.

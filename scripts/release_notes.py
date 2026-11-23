@@ -7,7 +7,7 @@ import tempfile
 from datetime import datetime, timedelta, timezone
 
 from apply_patches import PATCHES, TARGETS
-from release_version import latest_release
+from release_version import EMU_PREFIX, latest_release
 
 MESA_URL = 'https://gitlab.freedesktop.org/mesa/mesa'
 MESA_GIT = f'{MESA_URL}.git'
@@ -121,6 +121,9 @@ def main():
         '| `android/` | Android, bionic, Adrenotools `meta.json` |',
         '| `linux/` | Linux ARM64, glibc, Wayland/X11 WSI |',
         '| `manifest.json` | Both drivers with their path, libc and SHA-256 |',
+        '',
+        f'`{EMU_PREFIX}{args.version}.zip` is the same Android driver packaged on its own (`meta.json` and '
+        f'`libvulkan_freedreno.so`) for Android emulators that load Adrenotools drivers. DroidDeck does not use it.',
         '',
     ]
 
